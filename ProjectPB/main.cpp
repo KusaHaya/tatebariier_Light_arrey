@@ -207,6 +207,21 @@ void mySetLight(void)
 	glEnable(GL_LIGHT0);		// 光源の有効化
 }
 
+#include <chrono>
+
+// 1バイト送信のヘルパ
+static void SendArduinoByte(unsigned char b) {
+	if (!arduinoSerial.is_open()) return;
+	try {
+		boost::asio::write(arduinoSerial, boost::asio::buffer(&b, 1));
+	}
+	catch (...) {
+		// 送信失敗時は一旦閉じる（必要なら再接続ループを後で追加）
+		try { arduinoSerial.close(); }
+		catch (...) {}
+	}
+}
+
 void List()
 {
 	GLfloat nad[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -716,35 +731,12 @@ void RGBCG_image(int RGB)
 	glDisable(GL_STENCIL_TEST);
 }
 
-int SPEED = 7;
-void DTimer(int /*totalMilliSeconds*/)
+void DTimer(int)
 {
-	// 1) 位相更新（マスター）
-	if (running) {
-		kk = (kk + 1) % 4;
-	}
+	// 動画更新をタイマでやるならここ（ただし後述：dispに寄せるのがおすすめ）
+	// if (VideoSwitch) VideoMode->Update(0);
 
-	// 2) ライト制御（kkに同期）
-	if (arduinoSerial.is_open()) {
-		unsigned char light_command;
-		switch (kk) {
-		case 0: light_command = LIGHT_CON_0; break;
-		case 1: light_command = LIGHT_CON_1; break;
-		case 2: light_command = LIGHT_CON_2; break;
-		default: light_command = LIGHT_CON_3; break;
-		}
-		boost::asio::write(arduinoSerial, boost::asio::buffer(&light_command, 1));
-	}
-
-	// 3) 動画更新（描画より前に、1ステップ=1回に統一）
-	if (VideoSwitch) {
-		VideoMode->Update(0);
-	}
-
-	// 4) 描画要求
 	glutPostRedisplay();
-
-	// 5) 次回
 	glutTimerFunc(SPEED, DTimer, 0);
 }
 
@@ -831,21 +823,23 @@ void disp(void){
 	}
 	glutSwapBuffers();
 
-	if (arduinoSerial.is_open()) {
-		if (running == 1) {
-			char light_command;
-			switch (kk) {
-			case 0: light_command = TIME_DIV_0; break;
-			case 1: light_command = TIME_DIV_1; break;
-			case 2: light_command = TIME_DIV_2; break;
-			case 3: light_command = TIME_DIV_3; break;
-			}
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&light_command, 1));
+	// disp() 内の glutSwapBuffers() の直後に追加する想定
 
-			// ライトを送った直後に PC 側の描画フェーズを進める
-			kk = (kk + 1) % 4;
-		}
+	static auto lastSync = std::chrono::steady_clock::now();
 
+	glutSwapBuffers();
+
+	// 1フレーム = 1ステップ（VSync同期）
+	if (running == 1) {
+		kk = (kk + 1) % 4;
+	}
+
+	// 1秒に1回だけ、Arduinoへ位相補正を送る（通信ジッタの影響を最小化）
+	auto now = std::chrono::steady_clock::now();
+	if (now - lastSync >= std::chrono::seconds(1)) {
+		unsigned char cmd = (unsigned char)(TIME_DIV_0 + kk); // 200..203
+		SendArduinoByte(cmd);
+		lastSync = now;
 	}
 }
 
@@ -1216,9 +1210,12 @@ static void KeySpecialEvent(int key, int x, int y){
 int main(int argc, char ** argv){
 
 
-
-	arduinoSerial.open("COM3"); // Arduinoのポート名に合わせて変更
+	arduinoSerial.open("COM3");
 	arduinoSerial.set_option(boost::asio::serial_port_base::baud_rate(115200));
+
+	// 自走Arduinoの開始シーケンス
+	SendArduinoByte(RESET_SYNC);          // 20
+	SendArduinoByte(ENABLE_TIMEDIVISION); // 12
 	TCPClient client("127.0.0.1", 30000);
 	glutInit(&argc, argv);
 	glutInitWindowPosition(0, 0);

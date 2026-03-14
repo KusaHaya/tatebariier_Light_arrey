@@ -1218,6 +1218,7 @@ int main(int argc, char ** argv){
 	arduinoSerial.open("COM3");
 	arduinoSerial.set_option(boost::asio::serial_port_base::baud_rate(115200));
 
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	// 自走Arduinoの開始シーケンス
 	SendArduinoByte(RESET_SYNC);          // 20
 	SendArduinoByte(ENABLE_TIMEDIVISION); // 12

@@ -822,11 +822,11 @@ void disp(void){
 		flag = 1;
 	}
 
+	glutSwapBuffers();
+
 	// disp() 内の glutSwapBuffers() の直後に追加する想定
 
 	static auto lastSync = std::chrono::steady_clock::now();
-
-	glutSwapBuffers();
 
 	// 1フレーム = 1ステップ（VSync同期）
 	if (running == 1) {

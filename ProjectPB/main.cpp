@@ -848,11 +848,16 @@ static void KeyEvent(unsigned char key, int x, int y){
 	case 27:
 
 		while (!VideoMode->video_flag) VideoMode->dispose();
-		if (arduinoSerial.is_open()) {
-			char exit_command = LIGHT_EXIT;
 
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&exit_command, 1));
+		if (arduinoSerial.is_open()) {
+			// ★終了時：通常点灯へ戻す
+			unsigned char cmd = DISABLE_TIMEDIVISION; // 13
+			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
+
+			// 送信のフラッシュ代わりに少し待つ（環境によってはなくてもOK）
+			// Sleep(10);
 		}
+
 		exit(0);
 		break;
 	case 'Z':

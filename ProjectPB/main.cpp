@@ -717,11 +717,34 @@ void RGBCG_image(int RGB)
 }
 
 int SPEED = 7;
-void DTimer(int totalMilliSeconds)
+void DTimer(int /*totalMilliSeconds*/)
 {
-	//if (VideoSwitch) VideoMode->Update(0);
+	// 1) 位相更新（マスター）
+	if (running) {
+		kk = (kk + 1) % 4;
+	}
 
+	// 2) ライト制御（kkに同期）
+	if (arduinoSerial.is_open()) {
+		unsigned char light_command;
+		switch (kk) {
+		case 0: light_command = LIGHT_CON_0; break;
+		case 1: light_command = LIGHT_CON_1; break;
+		case 2: light_command = LIGHT_CON_2; break;
+		default: light_command = LIGHT_CON_3; break;
+		}
+		boost::asio::write(arduinoSerial, boost::asio::buffer(&light_command, 1));
+	}
+
+	// 3) 動画更新（描画より前に、1ステップ=1回に統一）
+	if (VideoSwitch) {
+		VideoMode->Update(0);
+	}
+
+	// 4) 描画要求
 	glutPostRedisplay();
+
+	// 5) 次回
 	glutTimerFunc(SPEED, DTimer, 0);
 }
 
@@ -886,9 +909,17 @@ static void KeyEvent(unsigned char key, int x, int y){
 		glutDisplayFunc(disp);
 		break;
 	case 't':
-		if (running) running = 0;
-		else running = 1;
-		glutDisplayFunc(disp);
+		if (running) {
+			running = 0;
+
+			// 停止時に位相を補正して、停止前と停止後でL/Rの表示位置が変わらないようにする
+			kk = (kk + 1) % 4;   // ←これで直ることが多い。逆にズレたら (kk + 3) % 4 にする
+		}
+		else {
+			running = 1;
+		}
+		glutPostRedisplay();
+		//glutDisplayFunc(disp);
 		break;
 	case 'o':
 		SHIFT += 1;

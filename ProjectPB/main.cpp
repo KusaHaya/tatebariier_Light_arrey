@@ -845,17 +845,10 @@ void disp(void){
 static void KeyEvent(unsigned char key, int x, int y){
 	switch (key){
 	case 27:
-
 		while (!VideoMode->video_flag) VideoMode->dispose();
 
-		if (arduinoSerial.is_open()) {
-			// ★終了時：通常点灯へ戻す
-			unsigned char cmd = DISABLE_TIMEDIVISION; // 13
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
-
-			// 送信のフラッシュ代わりに少し待つ（環境によってはなくてもOK）
-			// Sleep(10);
-		}
+		// 終了時：通常点灯へ戻す
+		SendArduinoByte((unsigned char)DISABLE_TIMEDIVISION);
 
 		exit(0);
 		break;
@@ -876,34 +869,25 @@ static void KeyEvent(unsigned char key, int x, int y){
 		break;
 	case 'q':
 		kk = 0;
-		if (arduinoSerial.is_open()) {
-			char cmd = TIME_DIV_0;
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
-		}
+		SendArduinoByte((unsigned char)TIME_DIV_0);
 		glutDisplayFunc(disp);
 		break;
+
 	case 'w':
 		kk = 1;
-		if (arduinoSerial.is_open()) {
-			char cmd = TIME_DIV_1;
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
-		}
+		SendArduinoByte((unsigned char)TIME_DIV_1);
 		glutDisplayFunc(disp);
 		break;
+
 	case 'e':
 		kk = 2;
-		if (arduinoSerial.is_open()) {
-			char cmd = TIME_DIV_2;
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
-		}
+		SendArduinoByte((unsigned char)TIME_DIV_2);
 		glutDisplayFunc(disp);
 		break;
+
 	case 'r':
 		kk = 3;
-		if (arduinoSerial.is_open()) {
-			char cmd = TIME_DIV_3;
-			boost::asio::write(arduinoSerial, boost::asio::buffer(&cmd, 1));
-		}
+		SendArduinoByte((unsigned char)TIME_DIV_3);
 		glutDisplayFunc(disp);
 		break;
 	case 't':

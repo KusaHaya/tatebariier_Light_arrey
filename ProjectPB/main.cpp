@@ -821,7 +821,6 @@ void disp(void){
 		qq = 0;
 		flag = 1;
 	}
-	glutSwapBuffers();
 
 	// disp() “à‚Ì glutSwapBuffers() ‚Ì’¼Œã‚É’Ç‰Á‚·‚é‘z’è
 

@@ -824,21 +824,13 @@ void disp(void){
 
 	glutSwapBuffers();
 
-	// disp() 内の glutSwapBuffers() の直後に追加する想定
-
-	static auto lastSync = std::chrono::steady_clock::now();
-
-	// 1フレーム = 1ステップ（VSync同期）
+	// このフレームで使った位相(kk)を送る
 	if (running == 1) {
-		kk = (kk + 1) % 4;
-	}
-
-	// 1秒に1回だけ、Arduinoへ位相補正を送る（通信ジッタの影響を最小化）
-	auto now = std::chrono::steady_clock::now();
-	if (now - lastSync >= std::chrono::seconds(1)) {
-		unsigned char cmd = (unsigned char)(TIME_DIV_0 + kk); // 200..203
+		unsigned char cmd = (unsigned char)(TIME_DIV_0 + (kk & 0x03)); // 200..203
 		SendArduinoByte(cmd);
-		lastSync = now;
+
+		// 次フレーム用に進める
+		kk = (kk + 1) % 4;
 	}
 }
 
